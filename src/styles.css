@@ -1,0 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+@theme { --font-sans: 'Source Sans 3', sans-serif; --font-display: 'IBM Plex Sans', sans-serif; --font-mono: 'JetBrains Mono', monospace; }
+:root { color-scheme: dark; font-family: 'Source Sans 3', sans-serif; background: #0D1117; color: #F0F6FC; font-synthesis: none; text-rendering: optimizeLegibility; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: #0D1117; }
+button, a { -webkit-tap-highlight-color: transparent; }
+a { color: inherit; text-decoration: none; }
+::selection { background: #238636; color: white; }
+.grid-bg { background-image: linear-gradient(#30363D 1px, transparent 1px), linear-gradient(90deg, #30363D 1px, transparent 1px); background-size: 32px 32px; mask-image: linear-gradient(to bottom, black, transparent 72%); opacity: .17; }
