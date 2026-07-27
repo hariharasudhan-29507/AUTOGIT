@@ -23,6 +23,11 @@ jobs:
         node-version: ${{ matrix.node-version }}
 
     - name: Build
+      if: ${{ hashFiles('package.json') != '' }}
       run: |
         npm install
         npx webpack
+
+    - name: Skip build (no package.json)
+      if: ${{ hashFiles('package.json') == '' }}
+      run: echo "No package.json found in repository root; skipping npm/webpack build."
