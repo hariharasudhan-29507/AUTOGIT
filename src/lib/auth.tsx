@@ -15,9 +15,8 @@ function ClerkSessionBridge({ children }: { children: ReactNode }) {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   if (!isClerkConfigured) return <AuthContext.Provider value={{ session: null, configured: false, isLoaded: true, getToken: async () => null }}>{children}</AuthContext.Provider>
-  return <ClerkProvider publishableKey={env.VITE_CLERK_PUBLISHABLE_KEY!} signInUrl="/login" signUpUrl="/signup" afterSignInUrl="/dashboard" afterSignUpUrl="/onboarding"><ClerkSessionBridge>{children}</ClerkSessionBridge></ClerkProvider>
+  return <ClerkProvider publishableKey={env.VITE_CLERK_PUBLISHABLE_KEY!} signInUrl="/login" signUpUrl="/signup" afterSignInUrl="/onboarding" afterSignUpUrl="/onboarding" signInFallbackRedirectUrl="/onboarding" signUpFallbackRedirectUrl="/onboarding"><ClerkSessionBridge>{children}</ClerkSessionBridge></ClerkProvider>
 }
 
 export function useAppAuth() { return useContext(AuthContext) }
 export { SignedIn, SignedOut, SignInButton, SignUpButton }
-
