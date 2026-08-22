@@ -11,3 +11,7 @@ export const env = publicEnvSchema.parse({
 })
 
 export const isClerkConfigured = Boolean(env.VITE_CLERK_PUBLISHABLE_KEY)
+
+
+
+
