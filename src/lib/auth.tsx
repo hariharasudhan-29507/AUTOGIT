@@ -20,3 +20,5 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAppAuth() { return useContext(AuthContext) }
 export { SignedIn, SignedOut, SignInButton, SignUpButton }
+
+
