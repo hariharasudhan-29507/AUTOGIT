@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   Bell,
   BookOpen,
@@ -25,6 +25,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useNotifications } from '@/lib/notifications'
 import { useRepositories, useSyncRepositories } from '@/lib/repositories'
+import { useWorkflows } from '@/lib/workflows'
 import {
   CommandDialog,
   CommandEmpty,
@@ -35,20 +36,6 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from '@/components/ui/command'
-
-const primaryNav = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/repositories', label: 'Repositories', icon: GitBranch },
-  { to: '/automation', label: 'Automation', icon: Bot },
-  { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/activity', label: 'Activity', icon: BookOpen },
-  { to: '/notifications', label: 'Notifications', icon: Bell },
-]
-
-const secondaryNav = [
-  { to: '/settings', label: 'Settings', icon: Settings },
-  { to: '/help', label: 'Help & Docs', icon: CircleHelp },
-]
 
 function Logo() {
   return (
@@ -72,9 +59,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const { data: notifications = [] } = useNotifications()
   const { data: repositoriesData } = useRepositories({ page: 1, pageSize: 10, search: '', visibility: 'all', language: '', sort: 'updated' })
+  const { data: workflows = [] } = useWorkflows()
   const syncMutation = useSyncRepositories()
 
   const unreadCount = notifications.filter((n) => !n.read).length
+  const totalRepos = repositoriesData?.total ?? 0
+  const activeWorkflowsCount = workflows.length
   const repositories = repositoriesData?.data ?? []
 
   // Global ⌘ K keyboard shortcut
@@ -89,12 +79,32 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
+  const primaryNav = [
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/repositories', label: 'Repositories', icon: GitBranch, count: totalRepos > 0 ? totalRepos : undefined },
+    { to: '/automation', label: 'Automation', icon: Bot, count: activeWorkflowsCount > 0 ? activeWorkflowsCount : undefined },
+    { to: '/analytics', label: 'Analytics', icon: BarChart3 },
+    { to: '/activity', label: 'Activity', icon: BookOpen },
+    { to: '/notifications', label: 'Notifications', icon: Bell, count: unreadCount > 0 ? unreadCount : undefined, isUnreadBadge: true },
+  ]
+
+  const secondaryNav = [
+    { to: '/settings', label: 'Settings', icon: Settings },
+    { to: '/help', label: 'Help & Docs', icon: CircleHelp },
+  ]
+
   const navItemClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors',
-      isActive ? 'bg-primary/10 text-foreground font-semibold' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+      'group relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-all',
+      isActive
+        ? 'bg-primary/10 text-foreground font-semibold shadow-2xs'
+        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
       collapsed && 'lg:justify-center lg:px-0'
     )
+
+  // Construct readable breadcrumb crumbs
+  const pathParts = location.pathname.split('/').filter(Boolean)
+  const rootName = pathParts[0] || 'dashboard'
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -123,30 +133,43 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
           </div>
 
-          <nav className="mt-6 flex flex-1 flex-col gap-1" aria-label="Primary navigation">
-            {primaryNav.map(({ to, label, icon: Icon }) => (
+          <nav className="mt-6 flex flex-1 flex-col gap-1.5" aria-label="Primary navigation">
+            {primaryNav.map(({ to, label, icon: Icon, count, isUnreadBadge }) => (
               <NavLink key={to} to={to} onClick={() => setMobileOpen(false)} className={navItemClass}>
-                <div className="relative">
-                  <Icon className="size-4.5" />
-                  {to === '/notifications' && unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 size-2 rounded-full bg-primary" />
-                  )}
-                </div>
-                <span className={cn(collapsed && 'lg:hidden')}>{label}</span>
-                {to === '/notifications' && unreadCount > 0 && !collapsed && (
-                  <span className="ml-auto rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                    {unreadCount}
-                  </span>
+                {({ isActive }) => (
+                  <>
+                    <div className="relative">
+                      <Icon className="size-4.5 transition-transform group-hover:scale-105" />
+                      {isUnreadBadge && count && (
+                        <span className="animate-subtle-pulse absolute -right-1 -top-1 size-2 rounded-full bg-primary" />
+                      )}
+                    </div>
+                    <span className={cn('truncate', collapsed && 'lg:hidden')}>{label}</span>
+                    {count !== undefined && !collapsed && (
+                      <span
+                        className={cn(
+                          'ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold transition-colors',
+                          isUnreadBadge
+                            ? 'bg-primary text-primary-foreground'
+                            : isActive
+                            ? 'bg-primary/20 text-foreground'
+                            : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </>
                 )}
               </NavLink>
             ))}
 
-            <div className="my-5 border-t border-border" />
+            <div className="my-4 border-t border-border" />
 
             {secondaryNav.map(({ to, label, icon: Icon }) => (
               <NavLink key={to} to={to} onClick={() => setMobileOpen(false)} className={navItemClass}>
-                <Icon className="size-4.5" />
-                <span className={cn(collapsed && 'lg:hidden')}>{label}</span>
+                <Icon className="size-4.5 transition-transform group-hover:scale-105" />
+                <span className={cn('truncate', collapsed && 'lg:hidden')}>{label}</span>
               </NavLink>
             ))}
           </nav>
@@ -161,26 +184,54 @@ export function AppShell({ children }: { children: ReactNode }) {
         </aside>
 
         {/* Content Area */}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 flex flex-col">
           {/* Header */}
           <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur-md sm:px-6">
-            <button
-              className="rounded-lg p-2 text-muted-foreground hover:bg-muted lg:hidden"
-              onClick={() => setMobileOpen(true)}
-              aria-label="Open navigation"
-            >
-              <Menu className="size-5" />
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                className="rounded-lg p-2 text-muted-foreground hover:bg-muted lg:hidden"
+                onClick={() => setMobileOpen(true)}
+                aria-label="Open navigation"
+              >
+                <Menu className="size-5" />
+              </button>
 
-            {/* Breadcrumb */}
-            <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
-              <span className="font-medium text-foreground">{location.pathname === '/dashboard' ? 'Workspace' : 'AutoGit'}</span>
-              <span>/</span>
-              <span className="capitalize">{location.pathname.split('/')[1] || 'Dashboard'}</span>
+              {/* Interactive Hierarchical Breadcrumbs */}
+              <nav className="flex items-center gap-2 text-sm text-muted-foreground" aria-label="Breadcrumb navigation">
+                <Link to="/dashboard" className="transition-colors hover:text-foreground">
+                  Workspace
+                </Link>
+                <span>/</span>
+                {pathParts.length > 1 ? (
+                  <>
+                    <Link to={`/${rootName}`} className="capitalize transition-colors hover:text-foreground">
+                      {rootName}
+                    </Link>
+                    <span>/</span>
+                    <span className="font-semibold text-foreground truncate max-w-[200px]">
+                      {pathParts[1]}
+                    </span>
+                  </>
+                ) : (
+                  <span className="capitalize font-semibold text-foreground">{rootName}</span>
+                )}
+              </nav>
             </div>
 
             {/* Right actions */}
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-2.5">
+              {/* Quick Sync State / Trigger Button */}
+              <button
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending}
+                className="hidden h-9 items-center gap-2 rounded-lg border border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
+                title="Synchronize repository telemetry from GitHub"
+              >
+                <RefreshCw className={cn('size-3.5', syncMutation.isPending && 'animate-spin text-primary')} />
+                <span>{syncMutation.isPending ? 'Syncing…' : 'Sync GitHub'}</span>
+              </button>
+
+              {/* Command Palette Trigger */}
               <button
                 onClick={() => setCommandOpen(true)}
                 className="hidden h-9 items-center gap-2 rounded-lg border border-border px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:flex"
@@ -191,15 +242,17 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">⌘ K</kbd>
               </button>
 
+              {/* Notification Bell */}
               <NavLink
                 to="/notifications"
                 className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 aria-label="Notifications"
               >
                 <Bell className="size-4.5" />
-                {unreadCount > 0 && <span className="absolute right-2 top-2 size-2 rounded-full bg-primary" />}
+                {unreadCount > 0 && <span className="animate-subtle-pulse absolute right-2 top-2 size-2 rounded-full bg-primary" />}
               </NavLink>
 
+              {/* Profile Icon */}
               <NavLink
                 to="/profile"
                 className="flex size-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
@@ -210,8 +263,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          {/* Main Body */}
-          <main className="mx-auto max-w-[1440px] p-5 sm:p-8">{children}</main>
+          {/* Main Body with Page Entry Transition */}
+          <main className="animate-page-enter mx-auto w-full max-w-[1440px] flex-1 p-5 sm:p-8">{children}</main>
         </div>
       </div>
 
