@@ -14,6 +14,7 @@ import {
   GitFork,
   Github,
   KeyRound,
+  LayoutDashboard,
   LockKeyhole,
   RefreshCw,
   Search,
@@ -25,6 +26,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useAppAuth } from '@/lib/auth'
 import { AuthAction } from '@/components/auth-action'
 import { GitHubConnectAction } from '@/components/github-connect-action'
 import { WorkflowScene } from '@/components/workflow-scene'
@@ -48,9 +50,11 @@ function Logo() {
 }
 
 export function PublicShell({ children }: { children: ReactNode }) {
+  const { session, isLoaded } = useAppAuth()
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-between">
-      {/* Navigation Header */}
+      {/* Navigation Header with Auth-Aware Action */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-md">
         <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-6 px-5 sm:px-8">
           <Logo />
@@ -68,24 +72,36 @@ export function PublicShell({ children }: { children: ReactNode }) {
               Docs
             </Link>
           </nav>
+
           <div className="flex items-center gap-3">
-            <Link to="/login" className="px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-              Log in
-            </Link>
-            <Link
-              to="/signup"
-              className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-            >
-              Get started
-            </Link>
+            {isLoaded && session ? (
+              <Link
+                to="/dashboard"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 shadow-2xs"
+              >
+                <LayoutDashboard className="size-4" /> Open Workspace
+              </Link>
+            ) : (
+              <>
+                <Link to="/login" className="px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                  Log in
+                </Link>
+                <Link
+                  to="/signup"
+                  className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 shadow-2xs"
+                >
+                  Get started
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1">{children}</main>
+      {/* Main Content with Page-Enter Animation */}
+      <main className="animate-page-enter flex-1">{children}</main>
 
-      {/* Footer */}
+      {/* Unified Footer */}
       <footer className="border-t border-border bg-card/50">
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-12 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8">
           <div className="flex items-center gap-3">
@@ -93,26 +109,26 @@ export function PublicShell({ children }: { children: ReactNode }) {
             <span className="text-muted-foreground">© 2026 AutoGit. Calm repository operations.</span>
           </div>
           <div className="flex flex-wrap items-center gap-6 text-muted-foreground">
-            <Link to="/features" className="hover:text-foreground">
+            <Link to="/features" className="hover:text-foreground transition-colors">
               Features
             </Link>
-            <Link to="/security" className="hover:text-foreground">
+            <Link to="/security" className="hover:text-foreground transition-colors">
               Security
             </Link>
-            <Link to="/how-it-works" className="hover:text-foreground">
+            <Link to="/how-it-works" className="hover:text-foreground transition-colors">
               How It Works
             </Link>
-            <Link to="/about" className="hover:text-foreground">
+            <Link to="/about" className="hover:text-foreground transition-colors">
               About
             </Link>
-            <Link to="/help" className="hover:text-foreground">
+            <Link to="/help" className="hover:text-foreground transition-colors">
               Help
             </Link>
             <a
               href="https://github.com/hariharasudhan-29507/AUTOGIT"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 hover:text-foreground"
+              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
             >
               <Github className="size-4" /> GitHub
             </a>
@@ -124,6 +140,8 @@ export function PublicShell({ children }: { children: ReactNode }) {
 }
 
 export function LandingPage() {
+  const { session } = useAppAuth()
+
   return (
     <PublicShell>
       {/* Hero Section */}
@@ -145,10 +163,10 @@ export function LandingPage() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link
-                to="/signup"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-6 font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                to={session ? '/dashboard' : '/signup'}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-6 font-semibold text-primary-foreground transition-opacity hover:opacity-90 shadow-2xs"
               >
-                Connect GitHub <ArrowRight className="size-4" />
+                {session ? 'Go to Workspace' : 'Connect GitHub'} <ArrowRight className="size-4" />
               </Link>
               <Link
                 to="/features"
@@ -171,7 +189,7 @@ export function LandingPage() {
             </div>
           </div>
 
-          <div className="relative min-h-[380px] overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
+          <div className="relative min-h-[380px] overflow-hidden rounded-2xl border border-border bg-card shadow-lg transition-transform hover:scale-[1.01]">
             <WorkflowScene />
           </div>
         </div>
@@ -229,7 +247,7 @@ export function LandingPage() {
           </div>
           <Link
             to="/security"
-            className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-background px-4 text-sm font-semibold hover:bg-muted"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-background px-4 text-sm font-semibold hover:bg-muted transition-colors"
           >
             Review Security Architecture <ChevronRight className="ml-1 size-4" />
           </Link>
@@ -241,7 +259,7 @@ export function LandingPage() {
 
 function FeatureCard({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
   return (
-    <Card className="p-6 transition-all hover:border-primary/30">
+    <Card className="p-6 transition-all hover:border-primary/40 hover:shadow-sm">
       <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
         <Icon className="size-5" />
       </div>
@@ -264,7 +282,7 @@ export function FeaturesPage() {
         </p>
 
         <div className="mt-14 grid gap-8 md:grid-cols-3">
-          <Card className="p-8">
+          <Card className="p-8 transition-all hover:border-primary/40">
             <span className="font-mono text-xs text-primary font-semibold">01 / SIGNAL</span>
             <h2 className="mt-4 font-display text-2xl font-semibold">Live Telemetry</h2>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -272,7 +290,7 @@ export function FeaturesPage() {
             </p>
           </Card>
 
-          <Card className="p-8">
+          <Card className="p-8 transition-all hover:border-primary/40">
             <span className="font-mono text-xs text-primary font-semibold">02 / SCORE</span>
             <h2 className="mt-4 font-display text-2xl font-semibold">Health Engine</h2>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -280,7 +298,7 @@ export function FeaturesPage() {
             </p>
           </Card>
 
-          <Card className="p-8">
+          <Card className="p-8 transition-all hover:border-primary/40">
             <span className="font-mono text-xs text-primary font-semibold">03 / EXECUTE</span>
             <h2 className="mt-4 font-display text-2xl font-semibold">Automations</h2>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -306,7 +324,7 @@ export function SecurityPage() {
         </p>
 
         <div className="mt-14 grid gap-6 md:grid-cols-3">
-          <Card className="p-7">
+          <Card className="p-7 transition-all hover:border-primary/40">
             <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <KeyRound className="size-5" />
             </div>
@@ -316,7 +334,7 @@ export function SecurityPage() {
             </p>
           </Card>
 
-          <Card className="p-7">
+          <Card className="p-7 transition-all hover:border-primary/40">
             <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <LockKeyhole className="size-5" />
             </div>
@@ -326,7 +344,7 @@ export function SecurityPage() {
             </p>
           </Card>
 
-          <Card className="p-7">
+          <Card className="p-7 transition-all hover:border-primary/40">
             <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Database className="size-5" />
             </div>
@@ -354,7 +372,7 @@ export function HowItWorksPage() {
         </p>
 
         <div className="mt-14 space-y-6">
-          <Card className="p-8">
+          <Card className="p-8 transition-all hover:border-primary/40">
             <div className="grid gap-6 sm:grid-cols-[60px_1fr] items-start">
               <span className="flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground font-mono font-bold text-lg">
                 01
@@ -368,7 +386,7 @@ export function HowItWorksPage() {
             </div>
           </Card>
 
-          <Card className="p-8">
+          <Card className="p-8 transition-all hover:border-primary/40">
             <div className="grid gap-6 sm:grid-cols-[60px_1fr] items-start">
               <span className="flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground font-mono font-bold text-lg">
                 02
@@ -382,7 +400,7 @@ export function HowItWorksPage() {
             </div>
           </Card>
 
-          <Card className="p-8">
+          <Card className="p-8 transition-all hover:border-primary/40">
             <div className="grid gap-6 sm:grid-cols-[60px_1fr] items-start">
               <span className="flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground font-mono font-bold text-lg">
                 03
@@ -486,7 +504,7 @@ export function OnboardingPage() {
 
           <Link
             to="/dashboard"
-            className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-lg border border-border text-sm font-semibold hover:bg-muted"
+            className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-lg border border-border text-sm font-semibold hover:bg-muted transition-colors"
           >
             Go to Workspace <ChevronRight className="ml-1 size-4" />
           </Link>
@@ -509,21 +527,21 @@ export function HelpPage() {
         </p>
 
         <div className="mt-14 grid gap-6 md:grid-cols-3">
-          <Card className="p-7">
+          <Card className="p-7 transition-all hover:border-primary/40">
             <h2 className="font-display text-xl font-semibold">1. Connecting GitHub</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               Authenticate via Clerk, then visit the onboarding page to authorize OAuth scopes with GitHub.
             </p>
           </Card>
 
-          <Card className="p-7">
+          <Card className="p-7 transition-all hover:border-primary/40">
             <h2 className="font-display text-xl font-semibold">2. Automating Workflows</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               Create routines on the Automation page, drag execution steps into your preferred order, and trigger runs on demand.
             </p>
           </Card>
 
-          <Card className="p-7">
+          <Card className="p-7 transition-all hover:border-primary/40">
             <h2 className="font-display text-xl font-semibold">3. Quick Switcher (⌘ K)</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               Use the global ⌘ K shortcut anywhere in the workspace to switch between views, run syncs, or search repositories.
