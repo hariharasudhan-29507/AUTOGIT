@@ -11,6 +11,7 @@ const serverEnvSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().min(1).optional(),
   GITHUB_REDIRECT_URI: z.string().url().optional(),
   GITHUB_STATE_SECRET: z.string().min(32).optional(),
+  GITHUB_WEBHOOK_SECRET: z.string().min(1).optional(),
   TOKEN_ENCRYPTION_KEY: z.preprocess((value) => value === '' ? undefined : value, z.string().min(1).optional()),
   APP_ORIGIN: z.string().url().optional(),
   CORS_ORIGIN: z.string().url().default('http://localhost:5173'),
