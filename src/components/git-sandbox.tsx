@@ -44,7 +44,7 @@ const SUGGESTED_COMMANDS = [
   { label: 'autogit scan', cmd: 'autogit scan', desc: 'Run security audit' },
   { label: 'autogit health', cmd: 'autogit health', desc: 'Compute health matrix' },
   { label: 'autogit diff', cmd: 'autogit diff', desc: 'View staged diff' },
-  { label: 'autogit commit-brief', cmd: 'autogit commit-brief', desc: 'Generate AI commit note' },
+  { label: 'autogit commit-pr', cmd: 'autogit commit-pr', desc: 'Automate directory PR commit' },
   { label: 'autogit workflow run', cmd: 'autogit workflow run', desc: 'Execute CI pipeline' },
 ]
 
@@ -228,7 +228,7 @@ export function GitSandbox({ className }: { className?: string }) {
       return
     }
 
-    if (trimmed === 'autogit commit-brief') {
+    if (trimmed === 'autogit commit-pr' || trimmed === 'autogit commit-brief') {
       setIsRunning(true)
       setTimeout(() => {
         setIsRunning(false)
@@ -238,11 +238,13 @@ export function GitSandbox({ className }: { className?: string }) {
             id: entryId,
             command: trimmed,
             output: [
-              { type: 'head', text: '✨ Generated Conventional Commit Brief:' },
-              { type: 'success', text: 'feat(api): add resilient auth retry strategy with telemetry error handler' },
-              { type: 'code', text: '• Wraps outgoing endpoint requests in 3-phase exponential backoff' },
-              { type: 'code', text: '• Emits typed telemetry audit event on non-recoverable failure' },
-              { type: 'code', text: '• Verified with vitest test suites (13/13 passing)' },
+              { type: 'head', text: '📂 Linked Project Directory: /app/autogit-workspace' },
+              { type: 'info', text: 'Analyzing 3 modified files across subdirectories...' },
+              { type: 'code', text: '  1. [src/components/app-shell.tsx] -> feat(ui): enhance navigation telemetry' },
+              { type: 'code', text: '  2. [src/components/repository-workbench.tsx] -> feat(workbench): directory commit bundler' },
+              { type: 'code', text: '  3. [src/lib/api.ts] -> feat(api): attach secure OAuth retry boundary' },
+              { type: 'success', text: '✔ Created 1 single git commit with 3 directory-scoped briefs' },
+              { type: 'head', text: '🚀 Dispatched commit 9a82e1f to origin/main' },
             ],
             timestamp: new Date().toLocaleTimeString([], { hour12: false }),
           },

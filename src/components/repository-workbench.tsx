@@ -34,6 +34,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
@@ -277,7 +278,7 @@ export function RepositoryWorkbench({ repo }: { repo: RepositorySummary }) {
   })
 
   // Conventional Commit Generator State
-  const [diffType, setDiffType] = useState<'feat' | 'fix' | 'perf' | 'chore'>('feat')
+  const [diffType, setDiffType] = useState<'feat' | 'fix' | 'refactor' | 'perf' | 'chore'>('feat')
   const [commitScope, setCommitScope] = useState('workbench')
   const [commitDesc, setCommitDesc] = useState('implement visual commit graph and code viewer')
 
@@ -375,27 +376,29 @@ export function RepositoryWorkbench({ repo }: { repo: RepositorySummary }) {
       </div>
 
       {/* Main Interactive Workbench Tabs */}
-      <Tabs defaultValue="commits" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 h-11 bg-muted/50 p-1 rounded-xl">
-          <TabsTrigger value="commits" className="flex items-center gap-1.5 text-xs font-medium">
-            <GitCommitHorizontal className="size-4 text-primary" /> Visual Commits
-          </TabsTrigger>
-          <TabsTrigger value="files" className="flex items-center gap-1.5 text-xs font-medium">
-            <Code2 className="size-4 text-primary" /> File Explorer
-          </TabsTrigger>
-          <TabsTrigger value="diffs" className="flex items-center gap-1.5 text-xs font-medium">
-            <Layers className="size-4 text-primary" /> Diff Inspector
-          </TabsTrigger>
-          <TabsTrigger value="brief" className="flex items-center gap-1.5 text-xs font-medium">
-            <Sparkles className="size-4 text-primary" /> Commit Drafter
-          </TabsTrigger>
-          <TabsTrigger value="prs" className="flex items-center gap-1.5 text-xs font-medium">
-            <GitPullRequest className="size-4 text-primary" /> Pull Requests
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-1.5 text-xs font-medium">
-            <ShieldCheck className="size-4 text-emerald-500" /> Security Audit
-          </TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="commits" className="w-full flex flex-col gap-4">
+        <div className="w-full overflow-x-auto pb-1">
+          <TabsList className="inline-flex h-11 min-w-max items-center justify-start rounded-xl bg-muted/50 p-1 text-muted-foreground">
+            <TabsTrigger value="commits" className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5">
+              <GitCommitHorizontal className="size-4 text-primary" /> Visual Commits
+            </TabsTrigger>
+            <TabsTrigger value="files" className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5">
+              <Code2 className="size-4 text-primary" /> File Explorer
+            </TabsTrigger>
+            <TabsTrigger value="diffs" className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5">
+              <Layers className="size-4 text-primary" /> Diff Inspector
+            </TabsTrigger>
+            <TabsTrigger value="brief" className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5">
+              <Sparkles className="size-4 text-primary" /> PR & Commit Automator
+            </TabsTrigger>
+            <TabsTrigger value="prs" className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5">
+              <GitPullRequest className="size-4 text-primary" /> Pull Requests
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5">
+              <ShieldCheck className="size-4 text-emerald-500" /> Security Audit
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* --- Tab 1: Visual Commit Graph --- */}
         <TabsContent value="commits" className="mt-4 space-y-4">
@@ -675,83 +678,164 @@ export function RepositoryWorkbench({ repo }: { repo: RepositorySummary }) {
           </Card>
         </TabsContent>
 
-        {/* --- Tab 4: AI Commit Brief Drafter --- */}
+        {/* --- Tab 4: Automated PR & Multi-file Commit Engine --- */}
         <TabsContent value="brief" className="mt-4">
-          <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-            <Card className="p-6">
-              <div className="flex items-center gap-2 border-b border-border pb-3">
-                <Sparkles className="size-5 text-primary" />
-                <h3 className="font-display font-semibold">Conventional Commit Drafter</h3>
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Format structured conventional commits automatically from staged AST diffs.
-              </p>
-
-              <div className="mt-6 space-y-4">
-                <div>
-                  <label className="text-xs font-medium text-foreground">Commit Type</label>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {(['feat', 'fix', 'perf', 'chore'] as const).map((t) => (
-                      <Button
-                        key={t}
-                        size="sm"
-                        variant={diffType === t ? 'default' : 'outline'}
-                        className="h-8 text-xs font-mono"
-                        onClick={() => setDiffType(t)}
-                      >
-                        {t}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-foreground">Scope</label>
-                  <Input
-                    value={commitScope}
-                    onChange={(e) => setCommitScope(e.target.value)}
-                    placeholder="e.g. api, auth, ui"
-                    className="mt-1 text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-foreground">Description</label>
-                  <Input
-                    value={commitDesc}
-                    onChange={(e) => setCommitDesc(e.target.value)}
-                    placeholder="Brief imperative summary"
-                    className="mt-1 text-xs"
-                  />
-                </div>
-              </div>
-            </Card>
-
-            {/* Generated Brief Preview */}
-            <Card className="flex flex-col justify-between p-6 bg-card/90">
+          <Card className="p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
               <div>
-                <h3 className="font-display font-semibold">Draft Preview</h3>
-                <p className="mt-1 text-xs text-muted-foreground">Ready to copy or commit directly via AutoGit workflow.</p>
-
-                <div className="mt-5 rounded-xl border border-border bg-muted/40 p-4 font-mono text-xs space-y-3">
-                  <div className="font-semibold text-primary">{generatedCommitMessage}</div>
-                  <div className="text-muted-foreground leading-relaxed">
-                    • Verified against repository typecheck and vitest suites
-                    <br />• Conforms to conventional commits v1.0.0
-                  </div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="size-5 text-primary" />
+                  <h3 className="font-display text-lg font-semibold">Automated PR & Multi-file Directory Commit Engine</h3>
+                  <Badge className="bg-primary/10 text-primary border-primary/20">Single Commit · Directory Scoped</Badge>
                 </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Link a local project folder, select changed files to bundle, generate AI commit messages per subdirectory, and dispatch a single combined commit to GitHub.
+                </p>
               </div>
 
-              <div className="mt-6 flex items-center gap-3">
-                <Button
-                  className="flex-1"
-                  onClick={() => copyToClipboard(generatedCommitMessage, 'Commit message copied to clipboard!')}
-                >
-                  <Copy className="size-4 mr-2" /> Copy Commit Message
+              <Badge variant="outline" className="font-mono text-xs h-7 self-start sm:self-auto">
+                <GitBranch className="size-3 mr-1 text-emerald-500" />
+                {repo.owner}/{repo.name} ({selectedBranch})
+              </Badge>
+            </div>
+
+            {/* Folder Link & File Selector */}
+            <div className="grid gap-6 md:grid-cols-3">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-foreground uppercase tracking-wider">1. Linked Project Folder</label>
+                <div className="flex items-center gap-2">
+                  <Folder className="size-4 text-amber-500" />
+                  <Input value={`/app/${repo.name}`} readOnly className="font-mono text-xs bg-muted/40" />
+                </div>
+                <p className="text-[11px] text-muted-foreground">Local directory linked to target repository remote.</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-foreground uppercase tracking-wider">2. Number of Files to Commit</label>
+                <Select value="3" onValueChange={(val) => { if (val) toast.info(`Selected ${val} changed files in directory`) }}>
+                  <SelectTrigger className="text-xs">
+                    <SelectValue placeholder="Select count" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 Changed File</SelectItem>
+                    <SelectItem value="2">2 Changed Files</SelectItem>
+                    <SelectItem value="3">3 Changed Files (Recommended)</SelectItem>
+                    <SelectItem value="5">5 Changed Files</SelectItem>
+                    <SelectItem value="all">All Staged Files (12)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Bundles selected files into a single git commit.</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-foreground uppercase tracking-wider">3. Conventional Preset</label>
+                <div className="flex gap-2">
+                  {(['feat', 'fix', 'refactor', 'chore'] as const).map((t) => (
+                    <Button
+                      key={t}
+                      size="sm"
+                      variant={diffType === t ? 'default' : 'outline'}
+                      className="h-8 text-xs font-mono flex-1"
+                      onClick={() => setDiffType(t)}
+                    >
+                      {t}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground">Prefix for structured commit summary.</p>
+              </div>
+            </div>
+
+            {/* Auto-generated Directory Commit Messages Preview */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-mono uppercase tracking-wider text-muted-foreground font-semibold">
+                  Auto-Generated Messages per Sub-Directory / File
+                </h4>
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => toast.success('Regenerated file commit messages')}>
+                  <RefreshCw className="size-3 mr-1" /> Regenerate Briefs
                 </Button>
               </div>
-            </Card>
-          </div>
+
+              <div className="space-y-3">
+                {[
+                  {
+                    dir: 'src/components/app-shell.tsx',
+                    message: `${diffType}(ui): enhance sidebar navigation with active branch indicator and live telemetry`,
+                    additions: '+42',
+                    deletions: '-5',
+                  },
+                  {
+                    dir: 'src/components/repository-workbench.tsx',
+                    message: `${diffType}(workbench): implement multi-file directory commit bundler and automated PR drafter`,
+                    additions: '+88',
+                    deletions: '-12',
+                  },
+                  {
+                    dir: 'src/lib/api.ts',
+                    message: `${diffType}(api): attach secure OAuth token retry header for repository directory sync`,
+                    additions: '+16',
+                    deletions: '-2',
+                  },
+                ].map((item, i) => (
+                  <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border bg-muted/20 p-4">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <FileCode className="size-3.5 text-sky-500" />
+                        <span className="font-mono text-xs font-semibold text-foreground">{item.dir}</span>
+                        <span className="font-mono text-[10px] text-emerald-600">{item.additions}</span>
+                        <span className="font-mono text-[10px] text-rose-600">{item.deletions}</span>
+                      </div>
+                      <p className="font-mono text-xs text-muted-foreground bg-background p-2.5 rounded-lg border border-border">
+                        {item.message}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Combined Single Commit Dispatch Summary */}
+            <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <GitCommitHorizontal className="size-5 text-primary" />
+                  <span className="font-display font-semibold text-sm">Combined Single Commit Payload</span>
+                </div>
+                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">3 Files Staged</Badge>
+              </div>
+
+              <div className="font-mono text-xs bg-zinc-950 text-zinc-100 p-4 rounded-xl space-y-2 border border-zinc-800">
+                <div className="text-emerald-400 font-semibold">
+                  git commit -m "{diffType}(core): bundle 3 file updates across components and api boundaries"
+                </div>
+                <div className="text-zinc-400 pl-4 border-l-2 border-zinc-700 space-y-1">
+                  <div>• [src/components/app-shell.tsx] {diffType}(ui): enhance sidebar navigation</div>
+                  <div>• [src/components/repository-workbench.tsx] {diffType}(workbench): implement multi-file directory commit bundler</div>
+                  <div>• [src/lib/api.ts] {diffType}(api): attach secure OAuth token retry header</div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <Button
+                  className="flex-1 sm:flex-initial"
+                  onClick={() => {
+                    toast.success('Successfully committed 3 files as a single commit!', {
+                      description: `Committed to repository directory /app/${repo.name} on branch ${selectedBranch}.`,
+                    })
+                  }}
+                >
+                  <GitCommitHorizontal className="size-4 mr-2" /> Commit & Push as Single Commit
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => copyToClipboard(`git commit -m "${diffType}(core): bundle 3 file updates across components and api boundaries"`, 'Copied commit command')}
+                >
+                  <Copy className="size-4 mr-2" /> Copy Git Command
+                </Button>
+              </div>
+            </div>
+          </Card>
         </TabsContent>
 
         {/* --- Tab 5: Pull Requests & CI Checks --- */}
