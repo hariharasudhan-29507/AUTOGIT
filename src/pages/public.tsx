@@ -205,7 +205,7 @@ export function FeaturesPage() {
         {/* Embedded Interactive Git Sandbox */}
         <div className="mt-20">
           <div className="mb-6">
-            <p className="font-mono text-xs uppercase tracking-wider text-primary">Interactive Demo</p>
+            <p className="font-mono text-xs uppercase tracking-wider text-primary">Live CLI Playground</p>
             <h2 className="mt-2 font-display text-3xl font-bold">Try the Git CLI Sandbox</h2>
             <p className="mt-1 text-sm text-muted-foreground">Execute status checks, AST secret scans, diff inspections, and health calculations live.</p>
           </div>
