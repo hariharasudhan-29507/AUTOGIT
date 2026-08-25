@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createApp, calculateRepositoryHealth } from './app'
-import type { ServerEnv } from './config'
+import { createApp, calculateRepositoryHealth } from './server/app'
+import type { ServerEnv } from './server/config'
 
 const env: ServerEnv = {
   CLERK_SECRET_KEY: 'clerk-secret-for-test',
