@@ -35,7 +35,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useAppAuth } from '@/lib/auth'
-import { useRepositories, useRepository, useSyncRepositories } from '@/lib/repositories'
+import { useGithubStatus, useRepositories, useRepository, useSyncRepositories } from '@/lib/repositories'
 import { useAnalytics } from '@/lib/analytics'
 import { RepositoryWorkbench } from '@/components/repository-workbench'
 import { RepositoryModal } from '@/components/repository-modal'

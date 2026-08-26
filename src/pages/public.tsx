@@ -374,8 +374,12 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   )
 }
 
+import { useSearchParams } from 'react-router-dom'
+
 export function OnboardingPage() {
   const { session } = useAppAuth()
+  const [searchParams] = useSearchParams()
+  const githubParam = searchParams.get('github')
 
   return (
     <PublicShell>
@@ -388,6 +392,25 @@ export function OnboardingPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             Link your GitHub account to sync repositories, branch updates, and health telemetry into your private AutoGit workspace.
           </p>
+
+          {githubParam === 'connected' && (
+            <Alert className="mt-4 border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+              <CheckCircle2 className="size-4 text-emerald-600" />
+              <AlertTitle>GitHub Account Connected!</AlertTitle>
+              <AlertDescription>
+                Your GitHub account was linked and your repositories have been synchronized.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {githubParam === 'invalid' && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertTitle>Connection Failed</AlertTitle>
+              <AlertDescription>
+                The GitHub authorization state was invalid or expired. Please try connecting again.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <Separator className="my-6" />
 
