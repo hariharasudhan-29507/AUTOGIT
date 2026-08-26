@@ -47,6 +47,23 @@ export function useSyncRepositories() {
       if (!accessToken) throw new ApiRequestError({ code: 'UNAUTHORIZED', message: 'Authentication is required.', recoverable: false })
       return apiRequest<{ synced: number }>('/repositories/sync', { method: 'POST', accessToken })
     },
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: repositoriesQueryKey }) },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: repositoriesQueryKey })
+      await queryClient.invalidateQueries({ queryKey: ['github-status'] })
+    },
+  })
+}
+
+export function useGithubStatus() {
+  const { configured, session, getToken } = useAppAuth()
+  return useQuery({
+    queryKey: ['github-status', session?.id ?? 'signed-out'],
+    enabled: configured && Boolean(session),
+    retry: false,
+    queryFn: async () => {
+      const accessToken = await getToken()
+      if (!accessToken) return { connected: false, login: null, avatarUrl: null, syncedAt: null }
+      return apiRequest<{ connected: boolean; login: string | null; avatarUrl: string | null; syncedAt: string | null }>('/github/status', { accessToken })
+    },
   })
 }

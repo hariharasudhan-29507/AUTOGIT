@@ -200,7 +200,37 @@ export function createApp(dependencies: AppDependencies = {}) {
   app.post('/api/webhooks/clerk', async (c) => handleClerkWebhook(c.req.raw, { env, supabase: adminSupabase }))
   app.post('/api/webhooks/github', async (c) => handleGitHubWebhook(c.req.raw, { env, supabase: adminSupabase }))
 
-  // --- GitHub Account Linking ---
+  // --- GitHub Account Linking & Status ---
+  app.get('/api/github/status', async (c) => {
+    const id = requestId()
+    try {
+      const auth = await authenticate(c.req.raw)
+      if (!auth) return c.json(errorBody('UNAUTHORIZED', 'Authentication is required.', id, false), 401)
+      if (!adminSupabase) {
+        return c.json({ connected: false, login: null, avatarUrl: null, syncedAt: null })
+      }
+      const connection = await adminSupabase
+        .from('github_connections')
+        .select('login, avatar_url, updated_at')
+        .eq('user_id', auth.userId)
+        .maybeSingle()
+
+      if (connection.error || !connection.data) {
+        return c.json({ connected: false, login: null, avatarUrl: null, syncedAt: null })
+      }
+
+      return c.json({
+        connected: true,
+        login: connection.data.login,
+        avatarUrl: connection.data.avatar_url,
+        syncedAt: connection.data.updated_at,
+      })
+    } catch (error) {
+      console.error('github status lookup failed', { requestId: id, error: error instanceof Error ? error.name : 'unknown' })
+      return c.json({ connected: false, login: null, avatarUrl: null, syncedAt: null })
+    }
+  })
+
   app.get('/api/github/connect', async (c) => {
     const auth = await authenticate(c.req.raw)
     if (!auth) return c.json({ code: 'UNAUTHORIZED', message: 'Authentication is required.' }, 401)
@@ -224,6 +254,7 @@ export function createApp(dependencies: AppDependencies = {}) {
     try {
       if (!adminSupabase) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured')
       const { token, account } = await exchangeGithubCode(code, env)
+      const nowIso = new Date().toISOString()
       const result = await adminSupabase.from('github_connections').upsert(
         {
           user_id: auth.userId,
@@ -231,7 +262,7 @@ export function createApp(dependencies: AppDependencies = {}) {
           login: account.login,
           avatar_url: account.avatar_url ?? null,
           token_encrypted: encryptToken(token, env),
-          updated_at: new Date().toISOString(),
+          updated_at: nowIso,
         },
         { onConflict: 'user_id' }
       )
@@ -243,8 +274,34 @@ export function createApp(dependencies: AppDependencies = {}) {
         title: 'GitHub account connected',
         description: `Linked GitHub user @${account.login}`,
         status: 'success',
-        created_at: new Date().toISOString(),
+        created_at: nowIso,
       })
+
+      // Auto-sync repositories upon connecting
+      try {
+        const repositories = await fetchGithubRepositories(token)
+        const rows = repositories.map((repository) => ({
+          user_id: auth.userId,
+          github_id: repository.id,
+          name: repository.name,
+          owner: repository.owner.login,
+          language: repository.language,
+          last_commit: repository.pushed_at,
+          stars: repository.stargazers_count,
+          forks: repository.forks_count,
+          open_issues: repository.open_issues_count,
+          health_score: calculateRepositoryHealth(repository),
+          synced: true,
+          is_private: repository.private,
+          updated_at: nowIso,
+        }))
+
+        if (rows.length > 0) {
+          await adminSupabase.from('repositories').upsert(rows, { onConflict: 'user_id,github_id' })
+        }
+      } catch (syncError) {
+        console.error('auto sync on connect failed', { userId: auth.userId, error: syncError instanceof Error ? syncError.message : 'unknown' })
+      }
 
       return c.redirect(`${env.APP_ORIGIN ?? 'http://localhost:5173'}/onboarding?github=connected`)
     } catch {
