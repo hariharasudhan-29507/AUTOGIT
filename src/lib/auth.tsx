@@ -1,7 +1,7 @@
 import { ClerkProvider, SignedIn, SignedOut, SignInButton, SignUpButton, useAuth as useClerkAuth, useUser } from '@clerk/clerk-react'
 import { createContext, useContext, type ReactNode } from 'react'
 import { env, isClerkConfigured } from './env'
-import type { UserSession } from '@/types'
+import type { GitHubConnectionStatus, UserSession } from '@/types'
 
 type AppAuthValue = { session: UserSession | null; configured: boolean; isLoaded: boolean; getToken: () => Promise<string | null> }
 const AuthContext = createContext<AppAuthValue>({ session: null, configured: isClerkConfigured, isLoaded: !isClerkConfigured, getToken: async () => null })
@@ -10,13 +10,14 @@ function ClerkSessionBridge({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn, getToken } = useClerkAuth()
   const { user } = useUser()
   const hasGithub = Boolean(user?.externalAccounts?.some((acc) => acc.provider === 'github' || acc.verification?.strategy === 'oauth_github'))
+  const githubStatus: GitHubConnectionStatus = hasGithub ? 'connected' : 'not_connected'
   const session = isSignedIn && user
     ? {
         id: user.id,
         email: user.primaryEmailAddress?.emailAddress ?? '',
         name: user.fullName ?? user.username ?? 'User',
         avatarUrl: user.imageUrl,
-        github: (hasGithub ? 'connected' : 'not_connected') as const,
+        github: githubStatus,
       }
     : null
   return <AuthContext.Provider value={{ session, configured: true, isLoaded, getToken }}>{children}</AuthContext.Provider>
