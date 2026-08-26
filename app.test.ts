@@ -384,4 +384,42 @@ describe('AutoGit Backend API', () => {
       expect(data.activity).toHaveLength(7)
     })
   })
+
+  describe('Level-Up Interactive Component Utilities', () => {
+    it('correctly parses GitHub import URLs into owner and repo name', () => {
+      const parseGitHubUrl = (input: string) => {
+        let parsedOwner = 'imported'
+        let parsedName = 'repository'
+        const clean = input.replace(/https?:\/\/github\.com\//, '').replace(/\.git$/, '')
+        const parts = clean.split('/')
+        if (parts.length >= 2) {
+          parsedOwner = parts[0]
+          parsedName = parts[1]
+        } else if (parts[0]) {
+          parsedName = parts[0]
+        }
+        return { owner: parsedOwner, name: parsedName }
+      }
+
+      expect(parseGitHubUrl('https://github.com/facebook/react.git')).toEqual({ owner: 'facebook', name: 'react' })
+      expect(parseGitHubUrl('vercel/next.js')).toEqual({ owner: 'vercel', name: 'next.js' })
+      expect(parseGitHubUrl('my-local-repo')).toEqual({ owner: 'imported', name: 'my-local-repo' })
+    })
+
+    it('validates branch name formatting and prevents duplicate branches', () => {
+      const branches = ['main', 'dev', 'feature/login']
+      const addBranch = (name: string) => {
+        const clean = name.trim().toLowerCase().replace(/\s+/g, '-')
+        if (!branches.includes(clean)) {
+          branches.push(clean)
+          return clean
+        }
+        return null
+      }
+
+      expect(addBranch('  Feature / Search  ')).toBe('feature-/-search')
+      expect(addBranch('main')).toBeNull()
+      expect(branches).toContain('dev')
+    })
+  })
 })

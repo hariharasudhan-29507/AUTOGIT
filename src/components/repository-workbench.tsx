@@ -265,7 +265,22 @@ const SAMPLE_PULL_REQUESTS = [
 ]
 
 export function RepositoryWorkbench({ repo }: { repo: RepositorySummary }) {
+  // Branch Management State
+  const [branches, setBranches] = useState<string[]>(['main', 'feature/workbench-v2', 'fix/health-radar', 'dev'])
   const [selectedBranch, setSelectedBranch] = useState('main')
+  const [isCreatingBranch, setIsCreatingBranch] = useState(false)
+  const [newBranchName, setNewBranchName] = useState('')
+
+  // Pull Request Modal State
+  const [pullRequests, setPullRequests] = useState(SAMPLE_PULL_REQUESTS)
+  const [isPrModalOpen, setIsPrModalOpen] = useState(false)
+  const [prTitle, setPrTitle] = useState('')
+  const [prTargetBranch, setPrTargetBranch] = useState('main')
+
+  // Diff Inspector View State
+  const [diffViewMode, setDiffViewMode] = useState<'side-by-side' | 'unified'>('side-by-side')
+  const [selectedDiffFile, setSelectedDiffFile] = useState('src/lib/api.ts')
+
   const [cloneType, setCloneType] = useState<'https' | 'ssh' | 'cli'>('https')
   const [copiedClone, setCopiedClone] = useState(false)
   const [selectedCommit, setSelectedCommit] = useState<CommitItem>(SAMPLE_COMMITS[0])
@@ -280,6 +295,44 @@ export function RepositoryWorkbench({ repo }: { repo: RepositorySummary }) {
   const [diffType, setDiffType] = useState<'feat' | 'fix' | 'perf' | 'chore'>('feat')
   const [commitScope, setCommitScope] = useState('workbench')
   const [commitDesc, setCommitDesc] = useState('implement visual commit graph and code viewer')
+
+  const handleCreateBranch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newBranchName.trim()) return
+    const cleanName = newBranchName.trim().toLowerCase().replace(/\s+/g, '-')
+    if (!branches.includes(cleanName)) {
+      setBranches((prev) => [...prev, cleanName])
+      setSelectedBranch(cleanName)
+      toast.success(`Created branch "${cleanName}"`)
+    } else {
+      setSelectedBranch(cleanName)
+    }
+    setNewBranchName('')
+    setIsCreatingBranch(false)
+  }
+
+  const handleCreatePR = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!prTitle.trim()) {
+      toast.error('PR title is required')
+      return
+    }
+    const newPr = {
+      id: 100 + pullRequests.length + 1,
+      title: prTitle.trim(),
+      author: 'AutoGit Engineer',
+      branch: selectedBranch,
+      target: prTargetBranch,
+      status: 'open' as const,
+      checks: 'passed' as const,
+      comments: 0,
+      updatedAt: 'Just now',
+    }
+    setPullRequests((prev) => [newPr, ...prev])
+    toast.success(`Pull Request #${newPr.id} created!`)
+    setPrTitle('')
+    setIsPrModalOpen(false)
+  }
 
   const cloneCommands = {
     https: `https://github.com/${repo.owner}/${repo.name}.git`,
@@ -332,8 +385,49 @@ export function RepositoryWorkbench({ repo }: { repo: RepositorySummary }) {
           </div>
         </div>
 
-        {/* Quick Clone & Action Bar */}
+        {/* Quick Branch Switcher & Clone Bar */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Branch Selector */}
+          <div className="relative">
+            <select
+              value={selectedBranch}
+              onChange={(e) => setSelectedBranch(e.target.value)}
+              className="h-9 rounded-lg border border-border bg-card px-3 pr-8 text-xs font-mono font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              {branches.map((b) => (
+                <option key={b} value={b}>
+                  git: {b}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {isCreatingBranch ? (
+            <form onSubmit={handleCreateBranch} className="flex items-center gap-1">
+              <Input
+                value={newBranchName}
+                onChange={(e) => setNewBranchName(e.target.value)}
+                placeholder="branch-name"
+                className="h-9 text-xs font-mono w-32"
+                autoFocus
+              />
+              <Button type="submit" size="sm" className="h-9 px-2 text-xs">
+                Add
+              </Button>
+              <Button type="button" variant="ghost" size="sm" className="h-9 px-2 text-xs" onClick={() => setIsCreatingBranch(false)}>
+                Cancel
+              </Button>
+            </form>
+          ) : (
+            <Button variant="outline" size="sm" className="h-9 text-xs" onClick={() => setIsCreatingBranch(true)}>
+              <GitBranch className="size-3.5 mr-1" /> New Branch
+            </Button>
+          )}
+
+          <Button size="sm" className="h-9 text-xs" onClick={() => setIsPrModalOpen(true)}>
+            <GitPullRequest className="size-3.5 mr-1" /> Open PR
+          </Button>
+
           <div className="flex items-center rounded-lg border border-border bg-muted/40 p-1 text-xs">
             <button
               onClick={() => setCloneType('https')}
@@ -347,12 +441,6 @@ export function RepositoryWorkbench({ repo }: { repo: RepositorySummary }) {
             >
               SSH
             </button>
-            <button
-              onClick={() => setCloneType('cli')}
-              className={`rounded px-2 py-1 font-medium transition-colors ${cloneType === 'cli' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground'}`}
-            >
-              CLI
-            </button>
             <Button
               size="sm"
               variant="ghost"
@@ -362,17 +450,68 @@ export function RepositoryWorkbench({ repo }: { repo: RepositorySummary }) {
               <Copy className="size-3 mr-1" /> Copy
             </Button>
           </div>
-
-          <a
-            href={`https://github.com/${repo.owner}/${repo.name}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-3 text-xs font-medium hover:bg-muted"
-          >
-            <ExternalLink className="size-3.5" /> GitHub
-          </a>
         </div>
       </div>
+
+      {/* PR Creation Dialog Modal */}
+      {isPrModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in-50">
+          <Card className="w-full max-w-md p-6 space-y-4 shadow-2xl border-border">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex items-center gap-2">
+                <GitPullRequest className="size-5 text-primary" />
+                <h3 className="font-display font-semibold">Create Pull Request</h3>
+              </div>
+              <button onClick={() => setIsPrModalOpen(false)} className="text-muted-foreground hover:text-foreground">
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePR} className="space-y-4">
+              <div>
+                <label className="text-xs font-medium text-foreground">PR Title *</label>
+                <Input
+                  value={prTitle}
+                  onChange={(e) => setPrTitle(e.target.value)}
+                  placeholder="e.g. feat: integrate live branch switcher"
+                  className="mt-1 text-xs"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="text-muted-foreground">Source Branch</label>
+                  <p className="mt-1 font-mono font-medium p-2 bg-muted/50 rounded border border-border">{selectedBranch}</p>
+                </div>
+                <div>
+                  <label className="text-muted-foreground">Target Branch</label>
+                  <select
+                    value={prTargetBranch}
+                    onChange={(e) => setPrTargetBranch(e.target.value)}
+                    className="mt-1 w-full p-2 bg-background font-mono rounded border border-border focus:outline-none"
+                  >
+                    {branches.filter((b) => b !== selectedBranch).map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <Button type="button" variant="outline" size="sm" onClick={() => setIsPrModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm">
+                  <GitPullRequest className="size-3.5 mr-1" /> Create PR
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
 
       {/* Main Interactive Workbench Tabs */}
       <Tabs defaultValue="commits" className="w-full">
@@ -649,29 +788,73 @@ export function RepositoryWorkbench({ repo }: { repo: RepositorySummary }) {
           </Card>
         </TabsContent>
 
-        {/* --- Tab 3: Unified Diff Inspector --- */}
+        {/* --- Tab 3: Interactive Diff Inspector --- */}
         <TabsContent value="diffs" className="mt-4">
           <Card className="overflow-hidden bg-zinc-950 font-mono text-zinc-100">
-            <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/90 px-4 py-3 text-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 bg-zinc-900/90 px-4 py-3 text-xs">
               <div className="flex items-center gap-2">
                 <Layers className="size-4 text-amber-400" />
-                <span className="font-semibold text-zinc-200">Unified Staged Diff — src/lib/api.ts</span>
-                <span className="rounded bg-emerald-950 px-1.5 py-0.5 text-[10px] text-emerald-400">+2</span>
-                <span className="rounded bg-rose-950 px-1.5 py-0.5 text-[10px] text-rose-400">-1</span>
+                <span className="font-semibold text-zinc-200">Staged Diff Inspector</span>
+                <span className="rounded bg-emerald-950 px-1.5 py-0.5 text-[10px] text-emerald-400">+6</span>
+                <span className="rounded bg-rose-950 px-1.5 py-0.5 text-[10px] text-rose-400">-2</span>
               </div>
-              <Badge variant="outline" className="border-zinc-700 bg-zinc-800 text-[10px] text-zinc-300">
-                Working Tree vs HEAD
-              </Badge>
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedDiffFile}
+                  onChange={(e) => setSelectedDiffFile(e.target.value)}
+                  className="bg-zinc-800 text-zinc-200 border border-zinc-700 rounded px-2 py-1 text-xs focus:outline-none"
+                >
+                  <option value="src/lib/api.ts">src/lib/api.ts</option>
+                  <option value="src/components/app-shell.tsx">src/components/app-shell.tsx</option>
+                  <option value="package.json">package.json</option>
+                </select>
+
+                <div className="flex rounded bg-zinc-800 p-0.5 border border-zinc-700">
+                  <button
+                    onClick={() => setDiffViewMode('side-by-side')}
+                    className={`px-2 py-1 rounded text-[11px] ${diffViewMode === 'side-by-side' ? 'bg-zinc-700 text-white font-semibold' : 'text-zinc-400'}`}
+                  >
+                    Side-by-Side
+                  </button>
+                  <button
+                    onClick={() => setDiffViewMode('unified')}
+                    className={`px-2 py-1 rounded text-[11px] ${diffViewMode === 'unified' ? 'bg-zinc-700 text-white font-semibold' : 'text-zinc-400'}`}
+                  >
+                    Unified
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div className="p-4 text-xs space-y-1">
-              <div className="text-zinc-500 font-semibold">@@ -14,6 +14,8 @@ export async function apiRequest(endpoint, options)</div>
-              <div className="text-zinc-400"> const url = `${'{'}env.VITE_API_URL{'}'}${'{'}endpoint{'}'}`</div>
-              <div className="bg-rose-950/40 text-rose-300 px-2 py-0.5 rounded-xs">- const res = await fetch(url, options)</div>
-              <div className="bg-emerald-950/40 text-emerald-300 px-2 py-0.5 rounded-xs">+ const res = await fetchWithRetry(url, {'{'} ...options, retries: 3 {'}'})</div>
-              <div className="bg-emerald-950/40 text-emerald-300 px-2 py-0.5 rounded-xs">+ if (!res.ok) handleTelemetryError(res.status)</div>
-              <div className="text-zinc-400"> return res.json()</div>
-            </div>
+            {diffViewMode === 'side-by-side' ? (
+              <div className="grid grid-cols-2 divide-x divide-zinc-800 p-4 text-xs">
+                {/* Before Column */}
+                <div className="pr-3 space-y-1">
+                  <div className="text-zinc-500 font-semibold border-b border-zinc-800 pb-1">HEAD (Original)</div>
+                  <div className="text-zinc-400">14 |  const url = `${'{'}env.VITE_API_URL{'}'}${'{'}endpoint{'}'}`</div>
+                  <div className="bg-rose-950/60 text-rose-300 px-2 py-0.5 rounded">15 | - const res = await fetch(url, options)</div>
+                  <div className="text-zinc-400">16 |  if (!res.ok) throw new ApiError()</div>
+                </div>
+
+                {/* After Column */}
+                <div className="pl-3 space-y-1">
+                  <div className="text-zinc-500 font-semibold border-b border-zinc-800 pb-1">Staged Working Tree</div>
+                  <div className="text-zinc-400">14 |  const url = `${'{'}env.VITE_API_URL{'}'}${'{'}endpoint{'}'}`</div>
+                  <div className="bg-emerald-950/60 text-emerald-300 px-2 py-0.5 rounded">15 | + const res = await fetchWithRetry(url, options)</div>
+                  <div className="bg-emerald-950/60 text-emerald-300 px-2 py-0.5 rounded">16 | + if (!res.ok) handleTelemetryError(res)</div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 text-xs space-y-1">
+                <div className="text-zinc-500 font-semibold">@@ -14,3 +14,5 @@ export async function apiRequest(endpoint, options)</div>
+                <div className="text-zinc-400"> const url = `${'{'}env.VITE_API_URL{'}'}${'{'}endpoint{'}'}`</div>
+                <div className="bg-rose-950/40 text-rose-300 px-2 py-0.5 rounded-xs">- const res = await fetch(url, options)</div>
+                <div className="bg-emerald-950/40 text-emerald-300 px-2 py-0.5 rounded-xs">+ const res = await fetchWithRetry(url, {'{'} ...options, retries: 3 {'}'})</div>
+                <div className="bg-emerald-950/40 text-emerald-300 px-2 py-0.5 rounded-xs">+ if (!res.ok) handleTelemetryError(res.status)</div>
+                <div className="text-zinc-400"> return res.json()</div>
+              </div>
+            )}
           </Card>
         </TabsContent>
 
@@ -757,16 +940,21 @@ export function RepositoryWorkbench({ repo }: { repo: RepositorySummary }) {
         {/* --- Tab 5: Pull Requests & CI Checks --- */}
         <TabsContent value="prs" className="mt-4">
           <Card className="p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
               <div>
                 <h3 className="font-display font-semibold">Pull Requests & CI/CD Telemetry</h3>
                 <p className="text-xs text-muted-foreground">Monitor automated checks, branch merging, and review signals.</p>
               </div>
-              <Badge variant="outline">{SAMPLE_PULL_REQUESTS.length} active</Badge>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={() => setIsPrModalOpen(true)}>
+                  <GitPullRequest className="size-3.5 mr-1" /> New Pull Request
+                </Button>
+                <Badge variant="outline">{pullRequests.length} total</Badge>
+              </div>
             </div>
 
             <div className="space-y-3">
-              {SAMPLE_PULL_REQUESTS.map((pr) => (
+              {pullRequests.map((pr) => (
                 <div key={pr.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-border p-4 bg-card hover:bg-muted/30 transition-colors">
                   <div className="flex items-start gap-3">
                     <GitPullRequest className={`size-5 mt-0.5 ${pr.status === 'open' ? 'text-emerald-500' : 'text-purple-500'}`} />
