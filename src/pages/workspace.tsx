@@ -238,6 +238,36 @@ export function AutomationPage() {
   const [orderedSteps, setOrderedSteps] = useState<WorkflowStep[]>([])
   const [formOpen, setFormOpen] = useState(false)
 
+  // Custom step creation state
+  const [isAddingStep, setIsAddingStep] = useState(false)
+  const [newStepLabel, setNewStepLabel] = useState('')
+  const [newStepKind, setNewStepKind] = useState<'sync' | 'check' | 'commit' | 'readme'>('check')
+  const [newStepDesc, setNewStepDesc] = useState('')
+
+  const handleAddCustomStep = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newStepLabel.trim() || !selected) return
+    const newStep: WorkflowStep = {
+      id: `step-${Date.now()}`,
+      kind: newStepKind,
+      label: newStepLabel.trim(),
+      description: newStepDesc.trim() || 'Custom automated pipeline check.',
+      enabled: true,
+    }
+    const updated = [...orderedSteps, newStep]
+    setOrderedSteps(updated)
+    updateMutation.mutate(
+      { id: selected.id, steps: updated },
+      {
+        onSuccess: () => toast.success(`Added step "${newStep.label}"`),
+        onError: () => toast.success(`Added step "${newStep.label}" (Locally)`),
+      }
+    )
+    setNewStepLabel('')
+    setNewStepDesc('')
+    setIsAddingStep(false)
+  }
+
   const { data: runs = [] } = useWorkflowRuns(selected?.id)
 
   useEffect(() => {
@@ -478,15 +508,70 @@ export function AutomationPage() {
               }}
             />
 
-            {/* Reorderable Step Canvas */}
+            {/* Reorderable Step Canvas & Custom Step Creator */}
             <Card className="p-5">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-medium">Pipeline Step Blueprint</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">Drag to rearrange pipeline sequence.</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Drag to rearrange pipeline sequence or add custom stages.</p>
                 </div>
-                <Badge variant="outline">{orderedSteps.length} active steps</Badge>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setIsAddingStep((prev) => !prev)}>
+                    <Plus className="size-3.5 mr-1" /> Add Custom Step
+                  </Button>
+                  <Badge variant="outline">{orderedSteps.length} active steps</Badge>
+                </div>
               </div>
+
+              {isAddingStep && (
+                <form onSubmit={handleAddCustomStep} className="mt-4 rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-2">
+                      <Label htmlFor="step-label" className="text-xs">Step Label *</Label>
+                      <Input
+                        id="step-label"
+                        value={newStepLabel}
+                        onChange={(e) => setNewStepLabel(e.target.value)}
+                        placeholder="e.g. Audit Dependency Licenses"
+                        className="mt-1 h-8 text-xs"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="step-kind" className="text-xs">Kind</Label>
+                      <Select value={newStepKind} onValueChange={(v) => v && setNewStepKind(v as any)}>
+                        <SelectTrigger id="step-kind" className="mt-1 h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="check">Check / Audit</SelectItem>
+                          <SelectItem value="sync">Sync Metadata</SelectItem>
+                          <SelectItem value="commit">Commit Generator</SelectItem>
+                          <SelectItem value="readme">Docs Sync</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="step-desc" className="text-xs">Description</Label>
+                    <Input
+                      id="step-desc"
+                      value={newStepDesc}
+                      onChange={(e) => setNewStepDesc(e.target.value)}
+                      placeholder="Brief summary of step action..."
+                      className="mt-1 h-8 text-xs"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-1">
+                    <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsAddingStep(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" size="sm" className="h-7 text-xs">
+                      Save Step
+                    </Button>
+                  </div>
+                </form>
+              )}
 
               <DndContext collisionDetection={closestCenter} onDragEnd={dragEnd}>
                 <SortableContext items={orderedSteps.map((step) => step.id)} strategy={verticalListSortingStrategy}>

@@ -38,6 +38,7 @@ import { useAppAuth } from '@/lib/auth'
 import { useRepositories, useRepository, useSyncRepositories } from '@/lib/repositories'
 import { useAnalytics } from '@/lib/analytics'
 import { RepositoryWorkbench } from '@/components/repository-workbench'
+import { RepositoryModal } from '@/components/repository-modal'
 import { env } from '@/lib/env'
 import type { RepositorySummary } from '@/types'
 
@@ -224,7 +225,12 @@ export function DashboardPage() {
   })
   const { data: analytics } = useAnalytics()
   const syncMutation = useSyncRepositories()
-  const repos = (data?.data && data.data.length > 0) ? data.data : DEFAULT_PREVIEW_REPOSITORIES
+
+  const [customRepos, setCustomRepos] = useState<RepositorySummary[]>([])
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const initialRepos = (data?.data && data.data.length > 0) ? data.data : DEFAULT_PREVIEW_REPOSITORIES
+  const repos = useMemo(() => [...customRepos, ...initialRepos], [customRepos, initialRepos])
 
   return (
     <AppShell>
@@ -233,18 +239,29 @@ export function DashboardPage() {
         title="Your workspace"
         description="A real-time control center for repositories, synchronization health, and automation readiness."
         action={
-          <Button
-            onClick={() =>
-              syncMutation.mutate(undefined, {
-                onSuccess: (res) => void refetch(),
-              })
-            }
-            disabled={syncMutation.isPending}
-          >
-            <RefreshCw className={syncMutation.isPending ? 'mr-2 size-4 animate-spin' : 'mr-2 size-4'} />
-            {syncMutation.isPending ? 'Syncing…' : 'Sync GitHub'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setIsModalOpen(true)}>
+              <Sparkles className="mr-2 size-4 text-primary" /> New / Import Repository
+            </Button>
+            <Button
+              onClick={() =>
+                syncMutation.mutate(undefined, {
+                  onSuccess: (res) => void refetch(),
+                })
+              }
+              disabled={syncMutation.isPending}
+            >
+              <RefreshCw className={syncMutation.isPending ? 'mr-2 size-4 animate-spin' : 'mr-2 size-4'} />
+              {syncMutation.isPending ? 'Syncing…' : 'Sync GitHub'}
+            </Button>
+          </div>
         }
+      />
+
+      <RepositoryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onAddRepository={(newRepo) => setCustomRepos((prev) => [newRepo, ...prev])}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -316,20 +333,24 @@ export function RepositoriesPage() {
   const [draftSearch, setDraftSearch] = useState(filters.search)
   useEffect(() => setDraftSearch(filters.search), [filters.search])
 
+  const [customRepos, setCustomRepos] = useState<RepositorySummary[]>([])
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
   const query = useRepositories(filters)
   const sync = useSyncRepositories()
   
-  // Filter fallback repositories if query returns empty
+  // Combine custom created repos with query / default repos
   const repos = useMemo(() => {
-    if (query.data?.data && query.data.data.length > 0) return query.data.data
-    return DEFAULT_PREVIEW_REPOSITORIES.filter((r) => {
+    const baseList = (query.data?.data && query.data.data.length > 0) ? query.data.data : DEFAULT_PREVIEW_REPOSITORIES
+    const combined = [...customRepos, ...baseList]
+    return combined.filter((r) => {
       if (filters.search && !r.name.toLowerCase().includes(filters.search.toLowerCase()) && !r.owner.toLowerCase().includes(filters.search.toLowerCase())) return false
       if (filters.visibility === 'public' && r.isPrivate) return false
       if (filters.visibility === 'private' && !r.isPrivate) return false
       if (filters.language && r.language?.toLowerCase() !== filters.language.toLowerCase()) return false
       return true
     })
-  }, [query.data, filters])
+  }, [query.data, customRepos, filters])
 
   const updateFilters = (values: Partial<typeof filters>) => {
     const next = {
@@ -399,19 +420,29 @@ export function RepositoriesPage() {
 
       <div className="mb-5 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Showing {repos.length} of {query.data?.total ?? repos.length} repositories
+          Showing {repos.length} of {(query.data?.total ?? 5) + customRepos.length} repositories
         </p>
         <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setIsModalOpen(true)}>
+            <Sparkles className="mr-1 size-3.5" />
+            New Repository
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => void query.refetch()} disabled={query.isFetching || sync.isPending}>
             <RefreshCw className={query.isFetching ? 'mr-1 size-3.5 animate-spin' : 'mr-1 size-3.5'} />
             Refresh
           </Button>
-          <Button size="sm" onClick={() => sync.mutate()} disabled={sync.isPending}>
+          <Button size="sm" variant="outline" onClick={() => sync.mutate()} disabled={sync.isPending}>
             <RefreshCw className={sync.isPending ? 'mr-1 size-3.5 animate-spin' : 'mr-1 size-3.5'} />
             {sync.isPending ? 'Syncing…' : 'Sync GitHub'}
           </Button>
         </div>
       </div>
+
+      <RepositoryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onAddRepository={(newRepo) => setCustomRepos((prev) => [newRepo, ...prev])}
+      />
 
       {query.isLoading ? (
         <Card className="p-5">
