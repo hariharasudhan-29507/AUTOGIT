@@ -16,7 +16,6 @@ import {
   Layers,
   ArrowRight,
   ExternalLink,
-  Download,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -178,17 +177,6 @@ export function WorkflowRunner({
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const exportLogsFile = () => {
-    const text = logs.map((l) => `[${l.timestamp}] [${l.level.toUpperCase()}] ${l.message}`).join('\n')
-    const blob = new Blob([text], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `autogit-workflow-logs-${workflow.id}.txt`
-    a.click()
-    toast.success('Execution logs downloaded!')
-  }
-
   const progressPercent = steps.length > 0 ? Math.round((Object.keys(completedSteps).length / steps.length) * 100) : 0
 
   return (
@@ -280,15 +268,6 @@ export function WorkflowRunner({
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 px-2 text-xs text-zinc-400 hover:text-white"
-              onClick={exportLogsFile}
-            >
-              <Download className="size-3 mr-1" />
-              Export Logs
-            </Button>
             <Button
               size="sm"
               variant="ghost"
