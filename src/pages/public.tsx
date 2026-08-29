@@ -27,8 +27,8 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { useAppAuth } from '@/lib/auth'
+import { Link, Navigate } from 'react-router-dom'
+import { useAppAuth, SignIn, SignUp } from '@/lib/auth'
 import { AuthAction } from '@/components/auth-action'
 import { GitHubConnectAction } from '@/components/github-connect-action'
 import { WorkflowScene } from '@/components/workflow-scene'
@@ -336,50 +336,89 @@ export function HowItWorksPage() {
 
 export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   const isSignup = mode === 'signup'
+  const { session, isLoaded, configured } = useAppAuth()
+
+  // If already authenticated, redirect straight to onboarding or dashboard to prevent looping back
+  if (isLoaded && session) {
+    return <Navigate to="/onboarding" replace />
+  }
+
   return (
     <PublicShell>
       <div className="mx-auto flex min-h-[calc(100vh-160px)] max-w-md flex-col justify-center px-5 py-12">
-        <Card className="p-8 shadow-xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-mono text-xs uppercase tracking-[.18em] text-primary">{isSignup ? 'Create Account' : 'Welcome Back'}</p>
-              <h1 className="mt-2 font-display text-2xl font-semibold">{isSignup ? 'Start with AutoGit' : 'Sign in to AutoGit'}</h1>
-            </div>
-            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Github className="size-5" />
-            </div>
+        {configured ? (
+          <div className="flex justify-center">
+            {isSignup ? (
+              <SignUp
+                routing="path"
+                path="/signup"
+                signInUrl="/login"
+                forceRedirectUrl="/onboarding"
+                fallbackRedirectUrl="/onboarding"
+                appearance={{
+                  elements: {
+                    rootBox: 'w-full shadow-2xl',
+                    card: 'bg-card text-card-foreground border border-border shadow-xl rounded-2xl',
+                  },
+                }}
+              />
+            ) : (
+              <SignIn
+                routing="path"
+                path="/login"
+                signUpUrl="/signup"
+                forceRedirectUrl="/onboarding"
+                fallbackRedirectUrl="/onboarding"
+                appearance={{
+                  elements: {
+                    rootBox: 'w-full shadow-2xl',
+                    card: 'bg-card text-card-foreground border border-border shadow-xl rounded-2xl',
+                  },
+                }}
+              />
+            )}
           </div>
+        ) : (
+          <Card className="p-8 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[.18em] text-primary">{isSignup ? 'Create Account' : 'Welcome Back'}</p>
+                <h1 className="mt-2 font-display text-2xl font-semibold">{isSignup ? 'Start with AutoGit' : 'Sign in to AutoGit'}</h1>
+              </div>
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Github className="size-5" />
+              </div>
+            </div>
 
-          <p className="mt-3 text-sm text-muted-foreground">
-            {isSignup ? 'Create your workspace and link GitHub to get started.' : 'Access your connected repositories and workflows.'}
-          </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {isSignup ? 'Create your workspace and link GitHub to get started.' : 'Access your connected repositories and workflows.'}
+            </p>
 
-          <Separator className="my-6" />
+            <Separator className="my-6" />
 
-          <AuthAction mode={mode} />
+            <AuthAction mode={mode} />
 
-          <p className="mt-4 text-center text-xs text-muted-foreground">Secure authentication powered by Clerk.</p>
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              Add <code className="text-primary font-mono">VITE_CLERK_PUBLISHABLE_KEY</code> to your <code className="text-primary font-mono">.env</code> to activate live login.
+            </p>
 
-          <Separator className="my-6" />
+            <Separator className="my-6" />
 
-          <p className="text-center text-sm text-muted-foreground">
-            {isSignup ? 'Already have an account?' : "Don't have an account?"}{' '}
-            <Link to={isSignup ? '/login' : '/signup'} className="font-semibold text-primary underline underline-offset-4">
-              {isSignup ? 'Sign in' : 'Create account'}
-            </Link>
-          </p>
-        </Card>
+            <p className="text-center text-sm text-muted-foreground">
+              {isSignup ? 'Already have an account?' : "Don't have an account?"}{' '}
+              <Link to={isSignup ? '/login' : '/signup'} className="font-semibold text-primary underline underline-offset-4">
+                {isSignup ? 'Sign in' : 'Create account'}
+              </Link>
+            </p>
+          </Card>
+        )}
       </div>
     </PublicShell>
   )
 }
 
-import { useSearchParams } from 'react-router-dom'
-
 export function OnboardingPage() {
-  const { session } = useAppAuth()
-  const [searchParams] = useSearchParams()
-  const githubParam = searchParams.get('github')
+  const { session, isLoaded } = useAppAuth()
 
   return (
     <PublicShell>
@@ -392,25 +431,6 @@ export function OnboardingPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             Link your GitHub account to sync repositories, branch updates, and health telemetry into your private AutoGit workspace.
           </p>
-
-          {githubParam === 'connected' && (
-            <Alert className="mt-4 border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
-              <CheckCircle2 className="size-4 text-emerald-600" />
-              <AlertTitle>GitHub Account Connected!</AlertTitle>
-              <AlertDescription>
-                Your GitHub account was linked and your repositories have been synchronized.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {githubParam === 'invalid' && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertTitle>Connection Failed</AlertTitle>
-              <AlertDescription>
-                The GitHub authorization state was invalid or expired. Please try connecting again.
-              </AlertDescription>
-            </Alert>
-          )}
 
           <Separator className="my-6" />
 
