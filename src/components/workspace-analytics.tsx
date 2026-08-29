@@ -10,13 +10,10 @@ import {
   CheckCircle2,
   TrendingUp,
   Code2,
-  Download,
-  Calendar,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { toast } from 'sonner'
 
 interface DayActivity {
   date: string
@@ -28,12 +25,12 @@ export function WorkspaceAnalytics() {
   const [hoveredDay, setHoveredDay] = useState<DayActivity | null>(null)
   const [timeRange, setTimeRange] = useState<'30d' | '90d' | '1y'>('1y')
 
-  // Generate contribution activity dataset filtered by selected time range
+  // Generate realistic 52-week contribution activity dataset
   const { weeks, totalContributions, currentStreak, maxStreak } = useMemo(() => {
-    const numWeeks = timeRange === '30d' ? 5 : timeRange === '90d' ? 13 : 52
-    const totalDays = numWeeks * 7
+    const totalDays = 52 * 7
     const result: DayActivity[][] = []
     let total = 0
+    let streak = 0
     let maxS = 0
     let currS = 0
 
@@ -44,6 +41,7 @@ export function WorkspaceAnalytics() {
       const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000)
       const dayOfWeek = d.getDay()
       
+      // Calculate realistic developer pattern (higher on weekdays, lower on weekends)
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
       const baseChance = isWeekend ? 0.35 : 0.85
       const count = Math.random() < baseChance ? Math.floor(Math.random() * 8) + 1 : 0
@@ -83,38 +81,7 @@ export function WorkspaceAnalytics() {
       currentStreak: 12,
       maxStreak: maxS > 18 ? maxS : 24,
     }
-  }, [timeRange])
-
-  const exportCSV = () => {
-    let csv = 'Date,Contributions\n'
-    weeks.flat().forEach((day) => {
-      csv += `"${day.date}",${day.count}\n`
-    })
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `autogit-analytics-${timeRange}.csv`
-    a.click()
-    toast.success(`Exported ${timeRange} analytics as CSV`)
-  }
-
-  const exportJSON = () => {
-    const data = {
-      timeRange,
-      totalContributions,
-      currentStreak,
-      maxStreak,
-      activity: weeks.flat(),
-    }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `autogit-analytics-${timeRange}.json`
-    a.click()
-    toast.success(`Exported ${timeRange} analytics as JSON`)
-  }
+  }, [])
 
   const languages = [
     { name: 'TypeScript', percentage: 58.4, color: 'bg-sky-500' },
@@ -146,42 +113,21 @@ export function WorkspaceAnalytics() {
           <div>
             <div className="flex items-center gap-2">
               <GitCommitHorizontal className="size-5 text-primary" />
-              <h3 className="font-display text-lg font-semibold">Contribution Activity Matrix</h3>
+              <h3 className="font-display text-lg font-semibold">52-Week Contribution Activity</h3>
             </div>
             <p className="text-xs text-muted-foreground">
-              {totalContributions.toLocaleString()} total commits and workflow dispatches ({timeRange}).
+              {totalContributions.toLocaleString()} total commits and workflow dispatches across all connected repositories.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Time Range Filter Selector */}
-            <div className="flex rounded-lg border border-border bg-muted/40 p-0.5 text-xs">
-              {(['30d', '90d', '1y'] as const).map((tr) => (
-                <button
-                  key={tr}
-                  onClick={() => setTimeRange(tr)}
-                  className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
-                    timeRange === tr ? 'bg-background shadow-xs text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {tr === '30d' ? '30 Days' : tr === '90d' ? '90 Days' : '1 Year'}
-                </button>
-              ))}
+          <div className="flex items-center gap-4 text-xs font-medium">
+            <div className="flex items-center gap-1.5 text-amber-500">
+              <Flame className="size-4" />
+              <span>{currentStreak} day streak</span>
             </div>
-
-            {/* Export Actions */}
-            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={exportCSV}>
-              <Download className="size-3 mr-1" /> CSV
-            </Button>
-            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={exportJSON}>
-              <Download className="size-3 mr-1" /> JSON
-            </Button>
-
-            <div className="flex items-center gap-3 text-xs font-medium pl-2 border-l border-border">
-              <div className="flex items-center gap-1.5 text-amber-500">
-                <Flame className="size-4" />
-                <span>{currentStreak} day streak</span>
-              </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <TrendingUp className="size-4" />
+              <span>Max: {maxStreak} days</span>
             </div>
           </div>
         </div>
